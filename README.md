@@ -1,5 +1,4 @@
 # QA_Engineer_Assesment
-# All the related files at master
 
 Cypress Configuration
 
