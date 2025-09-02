@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="4.552" tests="10" failures="1">
+  <testsuite name="Root Suite" timestamp="2025-08-31T13:16:53" tests="0" file="cypress\e2e\2-advanced-examples\cypress_api.cy.js" time="0.000" failures="0">
+  </testsuite>
+  <testsuite name="Cypress APIs" timestamp="2025-08-31T13:16:53" tests="0" time="0.000" failures="0">
+  </testsuite>
+  <testsuite name="Cypress.Commands" timestamp="2025-08-31T13:16:53" tests="1" time="2.803" failures="0">
+    <testcase name="Cypress APIs Cypress.Commands .add() - create a custom command" time="0.446" classname=".add() - create a custom command">
+    </testcase>
+  </testsuite>
+  <testsuite name="Cypress.Cookies" timestamp="2025-08-31T13:16:56" tests="1" time="0.217" failures="0">
+    <testcase name="Cypress APIs Cypress.Cookies .debug() - enable or disable debugging" time="0.190" classname=".debug() - enable or disable debugging">
+    </testcase>
+  </testsuite>
+  <testsuite name="Cypress.arch" timestamp="2025-08-31T13:16:56" tests="1" time="0.170" failures="0">
+    <testcase name="Cypress APIs Cypress.arch Get CPU architecture name of underlying OS" time="0.141" classname="Get CPU architecture name of underlying OS">
+    </testcase>
+  </testsuite>
+  <testsuite name="Cypress.config()" timestamp="2025-08-31T13:16:56" tests="1" time="0.418" failures="1">
+    <testcase name="Cypress APIs Cypress.config() Get and set configuration options" time="0.000" classname="Get and set configuration options">
+      <failure message="expected { Object (setupNodeEvents, baseUrl, ...) } to have property &apos;baseUrl&apos; of null, but got &apos;https://parabank.parasoft.com&apos;" type="AssertionError"><![CDATA[AssertionError: expected { Object (setupNodeEvents, baseUrl, ...) } to have property 'baseUrl' of null, but got 'https://parabank.parasoft.com'
+    at Context.eval (webpack://parabank-automation/./cypress/e2e/2-advanced-examples/cypress_api.cy.js:76:31)]]></failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="Cypress.dom" timestamp="2025-08-31T13:16:57" tests="1" time="0.173" failures="0">
+    <testcase name="Cypress APIs Cypress.dom .isHidden() - determine if a DOM element is hidden" time="0.145" classname=".isHidden() - determine if a DOM element is hidden">
+    </testcase>
+  </testsuite>
+  <testsuite name="Cypress.env()" timestamp="2025-08-31T13:16:57" tests="1" time="0.181" failures="0">
+    <testcase name="Cypress APIs Cypress.env() Get environment variables" time="0.154" classname="Get environment variables">
+    </testcase>
+  </testsuite>
+  <testsuite name="Cypress.log" timestamp="2025-08-31T13:16:57" tests="1" time="0.142" failures="0">
+    <testcase name="Cypress APIs Cypress.log Control what is printed to the Command Log" time="0.111" classname="Control what is printed to the Command Log">
+    </testcase>
+  </testsuite>
+  <testsuite name="Cypress.platform" timestamp="2025-08-31T13:16:57" tests="1" time="0.135" failures="0">
+    <testcase name="Cypress APIs Cypress.platform Get underlying OS name" time="0.109" classname="Get underlying OS name">
+    </testcase>
+  </testsuite>
+  <testsuite name="Cypress.version" timestamp="2025-08-31T13:16:57" tests="1" time="0.146" failures="0">
+    <testcase name="Cypress APIs Cypress.version Get current version of Cypress being run" time="0.120" classname="Get current version of Cypress being run">
+    </testcase>
+  </testsuite>
+  <testsuite name="Cypress.spec" timestamp="2025-08-31T13:16:58" tests="1" time="0.162" failures="0">
+    <testcase name="Cypress APIs Cypress.spec Get current spec information" time="0.130" classname="Get current spec information">
+    </testcase>
+  </testsuite>
+</testsuites>
