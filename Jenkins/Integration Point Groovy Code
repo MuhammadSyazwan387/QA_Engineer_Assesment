@@ -1,0 +1,115 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'BROWSER', choices: ['chrome', 'edge', 'all'], description: 'Browser to run tests')
+        choice(name: 'TEST_SUITE', choices: ['smoke', 'regression', 'full'], description: 'Test Suite')
+        string(name: 'BASE_URL', defaultValue: 'https://parabank.parasoft.com', description: 'Environment URL')
+    }
+
+    environment {
+        // Cypress binary cache folder inside workspace
+        CYPRESS_CACHE_FOLDER = "${WORKSPACE}\\.cypress_cache"
+        NODE_ENV = 'test'
+        FORCE_COLOR = '1'
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        timeout(time: 45, unit: 'MINUTES')
+    }
+
+    stages {
+        stage('Setup Environment') {
+            steps {
+                script {
+                    echo "🔧 Setting up folders..."
+                    bat '''
+                        if not exist cypress\\reports mkdir cypress\\reports
+                        if not exist cypress\\videos mkdir cypress\\videos
+                        if not exist cypress\\screenshots mkdir cypress\\screenshots
+                        if not exist cypress\\downloads mkdir cypress\\downloads
+                    '''
+
+                    echo "📦 Installing Node dependencies..."
+                    retry(2) {
+                        bat 'npm install --legacy-peer-deps'
+                    }
+
+                    echo "🌀 Installing Cypress binary if missing..."
+                    bat 'npx cypress install'
+                }
+            }
+        }
+
+        stage('Browser Detection & Test Execution') {
+            parallel {
+                stage('Chrome Tests') {
+                    when {
+                        expression { params.BROWSER == 'chrome' || params.BROWSER == 'all' }
+                    }
+                    steps {
+                        script {
+                            echo "🚀 Running tests on Chrome..."
+                            retry(2) {
+                                bat """
+                                    npx cypress run ^
+                                    --browser chrome ^
+                                    --config baseUrl=${params.BASE_URL} ^
+                                    --reporter junit ^
+                                    --reporter-options mochaFile=cypress/reports/chrome-[hash].xml,toConsole=true
+                                """
+                            }
+                        }
+                    }
+                }
+
+                stage('Edge Tests') {
+                    when {
+                        expression { params.BROWSER == 'edge' || params.BROWSER == 'all' }
+                    }
+                    steps {
+                        script {
+                            echo "🚀 Running tests on Edge..."
+                            retry(2) {
+                                bat """
+                                    npx cypress run ^
+                                    --browser edge ^
+                                    --config baseUrl=${params.BASE_URL} ^
+                                    --reporter junit ^
+                                    --reporter-options mochaFile=cypress/reports/edge-[hash].xml,toConsole=true
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Publish Reports') {
+            steps {
+                script {
+                    echo "📊 Publishing test reports..."
+                    junit 'cypress/reports/*.xml'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "🧹 Pipeline finished"
+            archiveArtifacts(artifacts: 'cypress/reports/**/*.xml', allowEmptyArchive: true)
+        }
+        success {
+            echo "✅ All tests passed!"
+        }
+        unstable {
+            echo "⚠️ Some tests failed but pipeline continued"
+        }
+        failure {
+            echo "❌ Pipeline failed!"
+        }
+    }
+}
