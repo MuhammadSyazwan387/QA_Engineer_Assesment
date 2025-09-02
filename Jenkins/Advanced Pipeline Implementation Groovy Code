@@ -1,0 +1,153 @@
+ pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'TEST_SUITE', choices: ['smoke','regression','full'], description: 'Test Suite to Execute')
+        choice(name: 'BROWSER', choices: ['chrome','edge','all'], description: 'Browser selection or all for multi-browser')
+        string(name: 'BASE_URL', defaultValue: 'https://parabank.parasoft.com', description: 'Environment URL')
+
+        booleanParam(name: 'SKIP_SMOKE', defaultValue: false, description: 'Skip smoke tests')
+        booleanParam(name: 'ENABLE_RETRIES', defaultValue: true, description: 'Enable retry mechanism')
+        choice(name: 'RETRY_COUNT', choices: ['1','2','3'], description: 'Number of retries for failed tests')
+    }
+
+    environment {
+        CYPRESS_CACHE_FOLDER = "${WORKSPACE}\\.cypress_cache"
+        NODE_ENV = 'test'
+        FORCE_COLOR = '1'
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        timeout(time: 45, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Environment Preparation') {
+            parallel {
+                stage('Setup Directories') {
+                    steps {
+                        bat '''
+                        if not exist cypress\\reports mkdir cypress\\reports
+                        if not exist cypress\\videos mkdir cypress\\videos
+                        if not exist cypress\\screenshots mkdir cypress\\screenshots
+                        '''
+                    }
+                }
+                stage('Install Dependencies') {
+                    steps {
+                        bat 'npm install --legacy-peer-deps'
+                    }
+                }
+                stage('Install Cypress Binary') {
+                    steps {
+                        echo "Installing Cypress binary locally..."
+                        bat 'npx cypress install'
+                    }
+                }
+            }
+        }
+
+        stage('Test Execution') {
+            steps {
+                script {
+                    def browsers = []
+                    if (params.BROWSER == 'all') {
+                        browsers = ['chrome','edge']
+                    } else {
+                        browsers = [params.BROWSER]
+                    }
+
+                    def branches = [:]
+
+                    for (browser in browsers) {
+                        def currentBrowser = browser
+                        branches["${currentBrowser}-tests"] = {
+                            stage("${currentBrowser.toUpperCase()} Tests") {
+                                script {
+                                    def maxRetries = params.ENABLE_RETRIES ? params.RETRY_COUNT.toInteger() : 0
+                                    def attempt = 0
+                                    def passed = false
+
+                                    while (attempt <= maxRetries && !passed) {
+                                        try {
+                                            if (attempt > 0) echo "Retry attempt ${attempt} for ${currentBrowser}"
+
+                                            echo "Running ${params.TEST_SUITE} tests on ${currentBrowser}..."
+                                            def suite = params.TEST_SUITE
+                                            def cmd = """
+                                            npx cypress run --browser ${currentBrowser} ^
+                                            --config baseUrl=${params.BASE_URL} ^
+                                            --reporter junit ^
+                                            --reporter-options mochaFile=cypress/reports/${suite}-${currentBrowser}-[hash].xml,toConsole=true ^
+                                            --env grepTags=${suite}
+                                            """
+                                            bat cmd
+
+                                            // Check if report was created
+                                            def reportStatus = bat(script: "dir cypress\\reports\\*${suite}-${currentBrowser}-*.xml /b 2>nul", returnStatus: true)
+                                            if (reportStatus == 0) {
+                                                passed = true
+                                                echo "${currentBrowser} tests passed"
+                                            } else {
+                                                throw new Exception("No test reports generated for ${currentBrowser}")
+                                            }
+                                        } catch (Exception e) {
+                                            attempt++
+                                            echo "Attempt ${attempt} failed for ${currentBrowser}: ${e.getMessage()}"
+                                            if (attempt > maxRetries) {
+                                                echo "All retries exhausted for ${currentBrowser}"
+                                                currentBuild.result = 'UNSTABLE'
+                                            } else {
+                                                sleep(5)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    parallel branches
+                }
+            }
+        }
+
+        stage('Report Generation') {
+            steps {
+                echo "Publishing JUnit reports..."
+                junit 'cypress/reports/*.xml'
+            }
+        }
+
+        stage('Cleanup & Notification') {
+            parallel {
+                stage('Cleanup Artifacts') {
+                    steps {
+                        bat '''
+                        rmdir /s /q cypress\\videos 2>nul
+                        rmdir /s /q cypress\\screenshots 2>nul
+                        '''
+                    }
+                }
+                stage('Summary Notification') {
+                    steps {
+                        script {
+                            echo "Build Result: ${currentBuild.result ?: 'SUCCESS'}"
+                            echo "Build URL: ${env.BUILD_URL}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always { echo "🏁 Pipeline completed" }
+        success { echo "✅ All tests passed!" }
+        unstable { echo "⚠️ Some tests failed or were retried" }
+        failure { echo "❌ Pipeline failed!" }
+    }
+}
